@@ -255,7 +255,10 @@ def chat_and_earn_points(page: ChromiumPage) -> None:
         raise RuntimeError("未找到聊天输入框")
 
     # 在确认核心页面元素加载完毕后，立刻提取并输出用户信息
-    display_user_info(page)
+    try:
+        display_user_info(page)
+    except Exception as ui_e:
+        print(f"[!] 显示用户信息失败，尝试继续对话: {ui_e}")
 
     input_box = page.ele(input_selector)
     message = random.choice(PRESET_MESSAGES)
