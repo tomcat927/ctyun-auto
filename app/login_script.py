@@ -14,6 +14,8 @@ from typing import Optional, Union
 
 import ddddocr
 from DrissionPage import ChromiumOptions, ChromiumPage
+from feishu_notify import record_result
+
 
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
@@ -377,6 +379,7 @@ def main() -> None:
             if is_logged_in:
                 chat_and_earn_points(page)
                 print("\n对话任务已完成")
+                record_result("AI对话", True, "对话任务执行完成，AI 已回复")
             break
 
         except Exception as e:
@@ -386,6 +389,10 @@ def main() -> None:
 
 
 # ==========================================
+    # while 循环结束：若重试全部失败则记录失败
+    if attempt >= max_retries:
+        record_result("AI对话", False, f"重试 {max_retries} 次后仍未完成")
+
 # OCR 模块封装
 # ==========================================
 

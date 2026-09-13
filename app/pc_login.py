@@ -17,6 +17,7 @@ from typing import Dict, Optional
 import ddddocr
 import requests
 from DrissionPage import ChromiumOptions, ChromiumPage
+from feishu_notify import record_result
 
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
@@ -1215,9 +1216,11 @@ def main(config_redeem_only: bool = False) -> None:
             running_in_docker=running_in_docker,
             config_redeem_only=config_redeem_only,
         )
+        record_result("云电脑保活", True, "挂机/兑换流程完成")
         page.quit()
 
     except Exception as e:
+        record_result("云电脑保活", False, f"执行异常: {e}")
         # save_screenshot(page)
         print(f"[!] 执行异常: {e}")
         sys.exit(1)
