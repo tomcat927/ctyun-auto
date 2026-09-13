@@ -102,22 +102,49 @@ def fill_credentials(page: ChromiumPage, username: str, password: str) -> None:
 
 
 def handle_captcha(page: ChromiumPage) -> None:
-    """检测页面是否存在图形验证码容器，若存在则提取图片并填充识别结果。"""
-    print("正在检测图形验证码容器...")
+    """���ҳ���Ƿ����ͼ����֤������������������ȡͼƬ�����ʶ������"""
+    print("���ڼ��ͼ����֤������...")
     captcha_container = page.ele("css:.fgt-capt-ct", timeout=2)
 
     if not captcha_container:
-        print("当前无需处理图形验证码。")
+        print("��ǰ���账��ͼ����֤�롣")
         return
 
-    print("检测到图形验证码，开始提取并识别...")
-    pic_ele = captcha_container.ele("css:img")
-    pic_bytes = pic_ele.get_screenshot(as_bytes=True)
+    # OCR ʶ���Ҫ���գ������������Ҫ�µĶ�λ��Ҫ 4 λ���֣�ȷ��ʶ��ɹ��ٴ���
+    max_captcha_tries = 5
+    ocr_result = ""
+    for captcha_try in range(max_captcha_tries):
+        print(f"��⵽ͼ����֤�룬��ʼ��ȡ��ʶ��... (��{captcha_try + 1}/{max_captcha_tries}��)")
+        # ���³��ҵ� captcha ��ǩ��ÿ�γ��Զ�ȡ��ǰͼƬ��֤����Ѿ������˱仯
+        captcha_container = page.ele("css:.fgt-capt-ct", timeout=2)
+        if not captcha_container:
+            print("��ǰ���账��ͼ����֤�롣")
+            return
 
-    ocr_result = get_bytes_numeric_captcha(pic_bytes)
-    print(f"OCR 识别结果为: {ocr_result}")
+        pic_ele = captcha_container.ele("css:img")
+        pic_bytes = pic_ele.get_screenshot(as_bytes=True)
 
-    input_ele = captcha_container.ele('css:input[placeholder="输入图形验证码"]')
+        ocr_result = get_bytes_numeric_captcha(pic_bytes)
+        print(f"OCR ʶ����Ϊ: {ocr_result}")
+
+        # У�� OCR ���Ƿ�Ϊ 4 λ���֣�����������²�������ȷ��
+        if ocr_result and ocr_result.strip().isnumeric() and len(ocr_result.strip()) >= 4:
+            ocr_result = ocr_result.strip()
+            break
+
+        print("[-] OCR ʶ��������Ч����Ϊ��λ���֣�����������֤��...")
+        # ���������֤��ͼƬ����������ڻ���·���ɱȣ����ص�ǰ����
+        try:
+            refresh_btn = captcha_container.ele("css:img", timeout=1)
+            if refresh_btn:
+                # ͨ������֤��ͼƬ����ˢ�£���������˵����ˢ�µ��
+                captcha_container.ele("css:img").click()
+        except Exception:
+            pass
+        time.sleep(1)
+
+    # ���ó��� 5 �λ���δ�õ���Чʶ����������ܵ�ʶ������ȥ���ò��ԣ������
+    input_ele = captcha_container.ele('css:input[placeholder="����ͼ����֤��"]')
     input_ele.clear()
     input_ele.input(ocr_result)
 
@@ -306,7 +333,7 @@ def main() -> None:
     page = ChromiumPage(addr_or_opts=browser_options)
     atexit.register(page.quit)
     attempt = 0
-    max_retries = 3
+    max_retries = 20
     while attempt < max_retries:
         print(f"--- 对话尝试: {attempt + 1}/{max_retries} ---")
         try:
